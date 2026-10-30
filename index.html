@@ -6,12 +6,15 @@
   <title>MOPA Laser Studio</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M30 70 L70 30 M45 30 L70 30 L70 55' stroke='white' stroke-width='9' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
   <link rel="stylesheet" href="static/css/style.css">
-  <!-- Apple-inspired Typography -->
+  <link rel="stylesheet" href="static/css/work-sans.css">
+  <!-- Apple-inspired Typography & Hardcoded Work Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body class="light-theme">
+  <!-- Hardcoded Font Preload Hook -->
+  <span id="fontPreloadHook" style="font-family: 'Work Sans', sans-serif; font-weight: 700; opacity: 0; position: absolute; pointer-events: none; z-index: -9999;">0123456789 Work Sans Preview</span>
   <!-- Apple-style Frosted Header -->
   <header class="app-header">
     <div class="header-left">
@@ -118,10 +121,10 @@
           <label for="fontSelect" class="field-label">Active Font</label>
           <div class="select-wrapper">
             <select id="fontSelect" class="select-input">
-              <option value="WorkSans-VariableFont_wght.ttf" selected>Work Sans (Variable)</option>
-              <option value="Arial-Bold.ttf">Arial Bold</option>
-              <option value="Consolas.ttf">Consolas</option>
-              <option value="Impact.ttf">Impact</option>
+              <option value="WorkSans-VariableFont_wght.ttf" data-font-family="Work Sans" data-name="Work Sans" selected>Work Sans (Variable)</option>
+              <option value="Arial-Bold.ttf" data-font-family="Arial Bold" data-name="Arial Bold">Arial Bold</option>
+              <option value="Consolas.ttf" data-font-family="Consolas" data-name="Consolas">Consolas</option>
+              <option value="Impact.ttf" data-font-family="Impact" data-name="Impact">Impact</option>
             </select>
           </div>
         </div>
@@ -577,6 +580,9 @@
         <div class="batch-loader hidden" id="batchProgressArea">
           <div class="loader-circle-sm"></div>
           <span id="batchStatusText">Rendering and downloading images...</span>
+          <div style="width: 100%; height: 4px; background: var(--slider-track); border-radius: 2px; margin-top: 8px; overflow: hidden;">
+            <div id="batchProgressBar" style="width: 0%; height: 100%; background: var(--accent-apple); transition: width 0.15s ease;"></div>
+          </div>
         </div>
       </div>
 

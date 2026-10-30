@@ -20,40 +20,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const activeFontBadge = document.getElementById('activeFontBadge');
   const fontFamilyLabel = document.getElementById('fontFamilyLabel');
   const fontSizeKbLabel = document.getElementById('fontSizeKbLabel');
-  const fontUploadDropzone = document.getElementById('fontUploadDropzone');
+  const fontUploadDropzone = document.getElementById('fontDropZone');
   const fontFileInput = document.getElementById('fontFileInput');
   const uploadProgress = document.getElementById('uploadProgress');
   const progressBar = document.getElementById('progressBar');
   const progressText = document.getElementById('progressText');
-
-  // Typography & Metrics Controls (Dual Slider / Number inputs)
-  const strokeThicknessSlider = document.getElementById('strokeThicknessSlider');
-  const strokeThicknessInput = document.getElementById('strokeThicknessInput');
-  const fontSizeSlider = document.getElementById('fontSizeSlider');
-  const fontSizeInput = document.getElementById('fontSizeInput');
-  const letterSpacingSlider = document.getElementById('letterSpacingSlider');
-  const letterSpacingInput = document.getElementById('letterSpacingInput');
-  const cropPadSlider = document.getElementById('cropPadSlider');
-  const cropPadInput = document.getElementById('cropPadInput');
-
-  // Laser Physics Controls
-  const seedInput = document.getElementById('seedInput');
-  const randomizeSeedBtn = document.getElementById('randomizeSeedBtn');
-  const randomizeSeedHeaderBtn = document.getElementById('randomizeSeedHeaderBtn');
-  const pitchSlider = document.getElementById('pitchSlider');
-  const pitchInput = document.getElementById('pitchInput');
-  const sawAngleSlider = document.getElementById('sawAngleSlider');
-  const sawAngleInput = document.getElementById('sawAngleInput');
-  const teethThreshSlider = document.getElementById('teethThreshSlider');
-  const teethThreshInput = document.getElementById('teethThreshInput');
-  const jitterSlider = document.getElementById('jitterSlider');
-  const jitterInput = document.getElementById('jitterInput');
-  const lipIntensitySlider = document.getElementById('lipIntensitySlider');
-  const lipIntensityInput = document.getElementById('lipIntensityInput');
-  const trenchIntensitySlider = document.getElementById('trenchIntensitySlider');
-  const trenchIntensityInput = document.getElementById('trenchIntensityInput');
-  const slagNoiseSlider = document.getElementById('slagNoiseSlider');
-  const slagNoiseInput = document.getElementById('slagNoiseInput');
 
   // Color Pickers
   const colorDarkPicker = document.getElementById('colorDarkPicker');
@@ -64,7 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const colorLightHex = document.getElementById('colorLightHex');
 
   // Preview Stage
-  const stageViewport = document.getElementById('stageViewport');
+  const stageContainer = document.getElementById('stageContainer');
+  const interactiveStage = document.getElementById('interactiveStage');
   const imageWrapper = document.getElementById('imageWrapper');
   const mopaOutputImage = document.getElementById('mopaOutputImage');
   const stageLoading = document.getElementById('stageLoading');
@@ -81,14 +53,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const appStatus = document.getElementById('appStatus');
 
   // Action Buttons
-  const copyBtn = document.getElementById('copyBtn');
+  const copyBtn = document.getElementById('copyImageBtn');
   const downloadBtnLink = document.getElementById('downloadBtnLink');
   const outputFileName = document.getElementById('outputFileName');
-  const batchModalBtn = document.getElementById('batchModalBtn');
+  const batchModalBtn = document.getElementById('openBatchModalBtn');
 
   // Batch Modal
   const batchModal = document.getElementById('batchModal');
-  const closeBatchBtn = document.getElementById('closeBatchBtn');
+  const closeBatchBtn = document.getElementById('closeBatchModalBtn');
   const cancelBatchBtn = document.getElementById('cancelBatchBtn');
   const runBatchBtn = document.getElementById('runBatchBtn');
   const batchTextarea = document.getElementById('batchTextarea');
@@ -99,9 +71,30 @@ document.addEventListener('DOMContentLoaded', () => {
   // Toast Container
   const toastContainer = document.getElementById('toastContainer');
 
+  // Seed Input & Randomize
+  const seedInput = document.getElementById('seedInput');
+  const randomizeSeedBtn = document.getElementById('randomizeSeedBtn');
+  const randomizeSeedHeaderBtn = document.getElementById('randomizeSeedHeaderBtn');
+
+  // Slider & Number Box Definitions
+  const sliderControls = [
+    { sliderId: 'strokeThicknessInput', valId: 'strokeThicknessVal' },
+    { sliderId: 'fontSizeInput', valId: 'fontSizeVal' },
+    { sliderId: 'letterSpacingInput', valId: 'letterSpacingVal' },
+    { sliderId: 'cropPadInput', valId: 'cropPadVal' },
+    { sliderId: 'pitchInput', valId: 'pitchVal' },
+    { sliderId: 'sawAngleInput', valId: 'sawAngleVal' },
+    { sliderId: 'teethThreshInput', valId: 'teethThreshVal' },
+    { sliderId: 'jitterInput', valId: 'jitterVal' },
+    { sliderId: 'lipIntensityInput', valId: 'lipIntensityVal' },
+    { sliderId: 'trenchIntensityInput', valId: 'trenchIntensityVal' },
+    { sliderId: 'slagNoiseInput', valId: 'slagNoiseVal' }
+  ];
+
   // State
   let currentZoom = 1.0;
   let isRendering = false;
+  let queuedRender = false;
   let currentImageDataUri = null;
   let loadedCustomFonts = new Set();
   let renderDebounceTimer = null;
@@ -111,8 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function initApp() {
     initTheme();
+    setupSliderPairs();
     setupEventListeners();
-    syncSliderPairs();
     updateCharCount();
     updateAllSliderFills();
     await loadFontCatalog('WorkSans-VariableFont_wght.ttf');
@@ -123,10 +116,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('mopa_theme') || 'light';
     setTheme(savedTheme);
 
-    themeToggleBtn.addEventListener('click', () => {
-      const isDark = htmlDoc.classList.contains('dark-theme');
-      setTheme(isDark ? 'light' : 'dark');
-    });
+    if (themeToggleBtn) {
+      themeToggleBtn.addEventListener('click', () => {
+        const isDark = htmlDoc.classList.contains('dark-theme');
+        setTheme(isDark ? 'light' : 'dark');
+      });
+    }
   }
 
   function setTheme(theme) {
@@ -134,12 +129,12 @@ document.addEventListener('DOMContentLoaded', () => {
       htmlDoc.classList.remove('light-theme');
       htmlDoc.classList.add('dark-theme');
       localStorage.setItem('mopa_theme', 'dark');
-      themeToggleBtn.setAttribute('title', 'Switch to Light Mode');
+      if (themeToggleBtn) themeToggleBtn.setAttribute('title', 'Switch to Light Mode');
     } else {
       htmlDoc.classList.remove('dark-theme');
       htmlDoc.classList.add('light-theme');
       localStorage.setItem('mopa_theme', 'light');
-      themeToggleBtn.setAttribute('title', 'Switch to Dark Mode');
+      if (themeToggleBtn) themeToggleBtn.setAttribute('title', 'Switch to Dark Mode');
     }
   }
 
@@ -162,37 +157,104 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // --- Resolve Font Family Name ---
+  function resolveFontFamily(opt) {
+    if (!opt) return 'Work Sans';
+    if (opt.dataset && opt.dataset.fontFamily) return opt.dataset.fontFamily;
+    const val = (opt.value || '').toLowerCase();
+    if (val.includes('work') || val.includes('sans')) return 'Work Sans';
+    if (val.includes('arial')) return 'Arial Bold';
+    if (val.includes('consolas')) return 'Consolas';
+    if (val.includes('impact')) return 'Impact';
+    return opt.dataset.name || opt.textContent.trim() || 'Work Sans';
+  }
+
   // --- Active Simulation Settings Collection ---
   function getActiveSimulationSettings() {
     const activeOpt = fontSelect.options[fontSelect.selectedIndex];
-    const fontFamily = activeOpt ? (activeOpt.dataset.fontFamily || activeOpt.dataset.name || 'Work Sans') : 'Work Sans';
+    const fontFamily = resolveFontFamily(activeOpt);
     const fontId = fontSelect.value || 'WorkSans-VariableFont_wght.ttf';
+
+    const getVal = (id, def) => {
+      const el = document.getElementById(id);
+      return el ? (parseFloat(el.value) || def) : def;
+    };
 
     return {
       font_id: fontId,
       font_family: fontFamily,
-      font_size: parseInt(fontSizeInput.value, 10) || 281,
-      stroke_thickness: parseFloat(strokeThicknessInput.value) || 6.5,
-      letter_spacing: parseInt(letterSpacingInput.value, 10) || 20,
-      crop_pad: parseInt(cropPadInput.value, 10) || 4,
-      seed: parseInt(seedInput.value, 10) || 18780,
-      pitch: parseFloat(pitchInput.value) || 13.0,
-      saw_angle: parseFloat(sawAngleInput.value) || 0.45,
-      teeth_threshold: parseFloat(teethThreshInput.value) || 0.25,
-      jitter_range: parseInt(jitterInput.value, 10) || 5,
-      outer_lip_intensity: parseFloat(lipIntensityInput.value) || 0.16,
+      font_size: parseInt(getVal('fontSizeInput', 281), 10),
+      stroke_thickness: getVal('strokeThicknessInput', 6.5),
+      letter_spacing: parseInt(getVal('letterSpacingInput', 20), 10),
+      crop_pad: parseInt(getVal('cropPadInput', 4), 10),
+      seed: parseInt(seedInput ? seedInput.value : 18780, 10) || 18780,
+      pitch: getVal('pitchInput', 13.0),
+      saw_angle: getVal('sawAngleInput', 0.45),
+      teeth_threshold: getVal('teethThreshInput', 0.25),
+      jitter_range: parseInt(getVal('jitterInput', 5), 10),
+      outer_lip_intensity: getVal('lipIntensityInput', 0.16),
       outer_lip_dist: 2.5,
-      inner_trench_intensity: parseFloat(trenchIntensityInput.value) || 0.3,
+      inner_trench_intensity: getVal('trenchIntensityInput', 0.3),
       inner_trench_dist: 6.5,
-      slag_noise_weight: parseFloat(slagNoiseInput.value) || 0.45,
+      slag_noise_weight: getVal('slagNoiseInput', 0.45),
       fine_noise_weight: 0.08,
       burr_shift_x: 5.5,
       burr_shift_y: 1.5,
       burr_weight: 0.9,
-      c_dark_hex: colorDarkHex.value || '#4a2c14',
-      c_mid_hex: colorMidHex.value || '#c99762',
-      c_light_hex: colorLightHex.value || '#f2d39e'
+      c_dark_hex: colorDarkHex ? colorDarkHex.value : '#4a2c14',
+      c_mid_hex: colorMidHex ? colorMidHex.value : '#c99762',
+      c_light_hex: colorLightHex ? colorLightHex.value : '#f2d39e'
     };
+  }
+
+  // --- Slider & Number Box Synchronization ---
+  function setupSliderPairs() {
+    sliderControls.forEach(({ sliderId, valId }) => {
+      const slider = document.getElementById(sliderId);
+      const numBox = document.getElementById(valId);
+      if (!slider || !numBox) return;
+
+      slider.addEventListener('input', () => {
+        numBox.value = slider.value;
+        updateSliderFill(slider);
+        if (textInput.value.trim()) {
+          debounceRender(40);
+        }
+      });
+
+      numBox.addEventListener('input', () => {
+        slider.value = numBox.value;
+        updateSliderFill(slider);
+        if (textInput.value.trim()) {
+          debounceRender(40);
+        }
+      });
+
+      numBox.addEventListener('change', () => {
+        slider.value = numBox.value;
+        updateSliderFill(slider);
+        if (textInput.value.trim()) {
+          renderEngraving();
+        }
+      });
+    });
+  }
+
+  // --- Live Slider Fill Track Calculation ---
+  function updateSliderFill(slider) {
+    if (!slider) return;
+    const min = parseFloat(slider.min) || 0;
+    const max = parseFloat(slider.max) || 100;
+    const val = parseFloat(slider.value) || 0;
+    const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+    slider.style.setProperty('--slider-fill-pct', `${pct}%`);
+  }
+
+  function updateAllSliderFills() {
+    sliderControls.forEach(({ sliderId }) => {
+      const slider = document.getElementById(sliderId);
+      if (slider) updateSliderFill(slider);
+    });
   }
 
   // --- Event Listeners ---
@@ -204,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateOutputFilename();
 
       if (textInput.value.trim()) {
-        debounceRender();
+        debounceRender(60);
       } else {
         clearCanvas();
       }
@@ -224,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Randomize Seed Buttons
     function triggerRandomSeed() {
       const newSeed = Math.floor(Math.random() * 90000) + 10000;
-      seedInput.value = newSeed;
+      if (seedInput) seedInput.value = newSeed;
       if (textInput.value.trim()) {
         renderEngraving();
       }
@@ -232,41 +294,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (randomizeSeedBtn) randomizeSeedBtn.addEventListener('click', triggerRandomSeed);
     if (randomizeSeedHeaderBtn) randomizeSeedHeaderBtn.addEventListener('click', triggerRandomSeed);
-
-    seedInput.addEventListener('change', () => {
-      if (textInput.value.trim()) renderEngraving();
-    });
+    if (seedInput) {
+      seedInput.addEventListener('change', () => {
+        if (textInput.value.trim()) renderEngraving();
+      });
+    }
 
     // Font Upload Drag & Drop
-    ['dragenter', 'dragover'].forEach(name => {
-      fontUploadDropzone.addEventListener(name, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        fontUploadDropzone.classList.add('dragover');
+    if (fontUploadDropzone) {
+      ['dragenter', 'dragover'].forEach(name => {
+        fontUploadDropzone.addEventListener(name, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          fontUploadDropzone.classList.add('dragover');
+        });
       });
-    });
 
-    ['dragleave', 'drop'].forEach(name => {
-      fontUploadDropzone.addEventListener(name, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        fontUploadDropzone.classList.remove('dragover');
+      ['dragleave', 'drop'].forEach(name => {
+        fontUploadDropzone.addEventListener(name, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          fontUploadDropzone.classList.remove('dragover');
+        });
       });
-    });
 
-    fontUploadDropzone.addEventListener('drop', (e) => {
-      const dt = e.dataTransfer;
-      const files = dt.files;
-      if (files.length > 0) {
-        uploadFontFile(files[0]);
-      }
-    });
+      fontUploadDropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+          uploadFontFile(files[0]);
+        }
+      });
+    }
 
-    fontFileInput.addEventListener('change', (e) => {
-      if (e.target.files.length > 0) {
-        uploadFontFile(e.target.files[0]);
-      }
-    });
+    if (fontFileInput) {
+      fontFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          uploadFontFile(e.target.files[0]);
+        }
+      });
+    }
 
     // Color Pickers Setup
     setupColorPicker(colorDarkPicker, colorDarkHex);
@@ -276,93 +343,51 @@ document.addEventListener('DOMContentLoaded', () => {
     // Surface Preview Switches
     document.querySelectorAll('input[name="surface"]').forEach(radio => {
       radio.addEventListener('change', (e) => {
-        stageViewport.className = 'stage-viewport surface-' + e.target.value;
+        const target = interactiveStage || stageContainer;
+        if (target) {
+          target.className = 'stage-canvas surface-' + e.target.value;
+        }
       });
     });
 
     // Zoom Controls
-    zoomInBtn.addEventListener('click', () => adjustZoom(0.25));
-    zoomOutBtn.addEventListener('click', () => adjustZoom(-0.25));
-    zoomResetBtn.addEventListener('click', () => setZoom(1.0));
+    if (zoomInBtn) zoomInBtn.addEventListener('click', () => adjustZoom(0.25));
+    if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => adjustZoom(-0.25));
+    if (zoomResetBtn) zoomResetBtn.addEventListener('click', () => setZoom(1.0));
 
     // Copy to Clipboard
-    copyBtn.addEventListener('click', copyImageToClipboard);
+    if (copyBtn) copyBtn.addEventListener('click', copyImageToClipboard);
 
     // Batch Generator Modal
-    batchModalBtn.addEventListener('click', () => {
-      batchModal.classList.remove('hidden');
-      batchTextarea.focus();
-    });
+    if (batchModalBtn && batchModal) {
+      batchModalBtn.addEventListener('click', () => {
+        batchModal.classList.remove('hidden');
+        if (batchTextarea) batchTextarea.focus();
+      });
+    }
 
-    closeBatchBtn.addEventListener('click', () => batchModal.classList.add('hidden'));
-    cancelBatchBtn.addEventListener('click', () => batchModal.classList.add('hidden'));
+    if (closeBatchBtn && batchModal) closeBatchBtn.addEventListener('click', () => batchModal.classList.add('hidden'));
+    if (cancelBatchBtn && batchModal) cancelBatchBtn.addEventListener('click', () => batchModal.classList.add('hidden'));
 
-    batchModal.addEventListener('click', (e) => {
-      if (e.target === batchModal) {
-        batchModal.classList.add('hidden');
-      }
-    });
+    if (batchModal) {
+      batchModal.addEventListener('click', (e) => {
+        if (e.target === batchModal) {
+          batchModal.classList.add('hidden');
+        }
+      });
+    }
 
-    runBatchBtn.addEventListener('click', runBatchGeneration);
-  }
-
-  // --- Slider and Number Input Two-Way Binding ---
-  function syncSliderPairs() {
-    bindPair(strokeThicknessSlider, strokeThicknessInput, true);
-    bindPair(fontSizeSlider, fontSizeInput, true);
-    bindPair(letterSpacingSlider, letterSpacingInput, true);
-    bindPair(cropPadSlider, cropPadInput, true);
-    bindPair(pitchSlider, pitchInput, false);
-    bindPair(sawAngleSlider, sawAngleInput, false);
-    bindPair(teethThreshSlider, teethThreshInput, false);
-    bindPair(jitterSlider, jitterInput, false);
-    bindPair(lipIntensitySlider, lipIntensityInput, false);
-    bindPair(trenchIntensitySlider, trenchIntensityInput, false);
-    bindPair(slagNoiseSlider, slagNoiseInput, false);
-  }
-
-  function bindPair(slider, numberInput, isTypography = false) {
-    slider.addEventListener('input', () => {
-      numberInput.value = slider.value;
-      updateSliderFill(slider);
-      if (textInput.value.trim()) debounceRender();
-    });
-
-    numberInput.addEventListener('input', () => {
-      slider.value = numberInput.value;
-      updateSliderFill(slider);
-      if (textInput.value.trim()) debounceRender();
-    });
-
-    numberInput.addEventListener('change', () => {
-      slider.value = numberInput.value;
-      updateSliderFill(slider);
-      if (textInput.value.trim()) renderEngraving();
-    });
-  }
-
-  // --- Live Slider Fill Track Calculation ---
-  function updateSliderFill(slider) {
-    const min = parseFloat(slider.min) || 0;
-    const max = parseFloat(slider.max) || 100;
-    const val = parseFloat(slider.value) || 0;
-    const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
-    slider.style.setProperty('--slider-fill-pct', `${pct}%`);
-  }
-
-  function updateAllSliderFills() {
-    document.querySelectorAll('.apple-slider').forEach(slider => {
-      updateSliderFill(slider);
-    });
+    if (runBatchBtn) runBatchBtn.addEventListener('click', runBatchGeneration);
   }
 
   // --- Color Picker Setup ---
   function setupColorPicker(picker, textInputElem) {
+    if (!picker || !textInputElem) return;
     textInputElem.value = picker.value;
 
     picker.addEventListener('input', () => {
       textInputElem.value = picker.value;
-      if (textInput.value.trim()) debounceRender();
+      if (textInput.value.trim()) debounceRender(40);
     });
 
     picker.addEventListener('change', () => {
@@ -372,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
     textInputElem.addEventListener('input', () => {
       if (/^#[0-9A-Fa-f]{6}$/.test(textInputElem.value)) {
         picker.value = textInputElem.value;
-        if (textInput.value.trim()) debounceRender();
+        if (textInput.value.trim()) debounceRender(40);
       }
     });
 
@@ -404,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
     appStatus.querySelector('.status-pip').style.backgroundColor = 'var(--accent-green)';
   }
 
-  function debounceRender(ms = 80) {
+  function debounceRender(ms = 50) {
     clearTimeout(renderDebounceTimer);
     renderDebounceTimer = setTimeout(() => {
       renderEngraving();
@@ -453,7 +478,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Font Management & Catalog ---
   async function loadFontCatalog(selectFontId = 'WorkSans-VariableFont_wght.ttf') {
-    // 1. Default bundled standard laser fonts
     const defaultFonts = [
       { id: 'WorkSans-VariableFont_wght.ttf', name: 'Work Sans', fontFamily: 'Work Sans', filename: 'WorkSans-VariableFont_wght.ttf', category: 'bundled', size_kb: 351.2, url: 'fonts/bundled/WorkSans-VariableFont_wght.ttf' },
       { id: 'Arial-Bold.ttf', name: 'Arial Bold', fontFamily: 'Arial Bold', filename: 'Arial-Bold.ttf', category: 'bundled', size_kb: 966.6, url: 'fonts/bundled/Arial-Bold.ttf' },
@@ -463,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let fontCatalog = [...defaultFonts];
 
-    // 2. Fetch fonts.json if available
+    // Fetch fonts.json if available
     try {
       const resp = await fetch('fonts/fonts.json');
       if (resp.ok) {
@@ -474,7 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {}
 
-    // 3. Restore any previously uploaded fonts from browser IndexedDB
+    // Restore any previously uploaded fonts from browser IndexedDB
     try {
       const storedFonts = await FontDB.getAllFonts();
       for (const sf of storedFonts) {
@@ -497,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {}
 
-    // 4. Render Font Select Options
+    // Render Font Select Options
     fontSelect.innerHTML = '';
 
     const bundledGroup = document.createElement('optgroup');
@@ -538,9 +562,10 @@ document.addEventListener('DOMContentLoaded', () => {
       updateActiveFontDisplay(activeOpt);
     }
 
-    // Wait for fonts to be ready
     if (document.fonts && document.fonts.ready) {
-      await document.fonts.ready;
+      try {
+        await document.fonts.ready;
+      } catch (e) {}
     }
 
     if (textInput.value.trim()) {
@@ -559,13 +584,15 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    uploadProgress.classList.add('active');
-    progressBar.style.width = '30%';
-    progressText.textContent = `Reading ${file.name}...`;
+    if (uploadProgress) {
+      uploadProgress.classList.add('active');
+      progressBar.style.width = '30%';
+      progressText.textContent = `Reading ${file.name}...`;
+    }
 
     try {
       const buffer = await file.arrayBuffer();
-      progressBar.style.width = '60%';
+      if (progressBar) progressBar.style.width = '60%';
 
       const cleanFontName = file.name.replace(/\.[^/.]+$/, '').trim() || 'CustomFont';
       const fontFace = new FontFace(cleanFontName, buffer);
@@ -573,16 +600,16 @@ document.addEventListener('DOMContentLoaded', () => {
       document.fonts.add(loaded);
       loadedCustomFonts.add(cleanFontName);
 
-      progressBar.style.width = '85%';
+      if (progressBar) progressBar.style.width = '85%';
       const sizeKb = Math.round((file.size / 1024) * 10) / 10;
       await FontDB.saveFont(cleanFontName, buffer, file.name, sizeKb);
 
-      // Optional server upload if running under local Flask
+      // Background sync with local Flask server if running
       const formData = new FormData();
       formData.append('file', file);
       fetch('/api/upload-font', { method: 'POST', body: formData }).catch(() => {});
 
-      progressBar.style.width = '100%';
+      if (progressBar) progressBar.style.width = '100%';
       showToast(`Loaded font: ${cleanFontName}`, 'success');
 
       await loadFontCatalog(file.name);
@@ -590,11 +617,13 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Font loading failed:', err);
       showToast('Failed to parse font file', 'error');
     } finally {
-      setTimeout(() => {
-        uploadProgress.classList.remove('active');
-        progressBar.style.width = '0%';
-        fontFileInput.value = '';
-      }, 700);
+      if (uploadProgress) {
+        setTimeout(() => {
+          uploadProgress.classList.remove('active');
+          if (progressBar) progressBar.style.width = '0%';
+          if (fontFileInput) fontFileInput.value = '';
+        }, 700);
+      }
     }
   }
 
@@ -615,10 +644,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const name = option.dataset.name || option.textContent;
     const size = option.dataset.size || '';
     const url = option.dataset.url;
+    const fontFamily = resolveFontFamily(option);
 
     activeFontBadge.textContent = name;
     fontFamilyLabel.textContent = name;
     fontSizeKbLabel.textContent = size;
+    liveFontPreview.style.fontFamily = `"${fontFamily}", "Work Sans", sans-serif`;
 
     if (url) {
       loadFontFace(name, url);
@@ -633,7 +664,10 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (isRendering) return;
+    if (isRendering) {
+      queuedRender = true;
+      return;
+    }
     isRendering = true;
 
     stageLoading.classList.remove('hidden');
@@ -647,7 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     try {
-      // 1. First attempt: High-Performance Client-Side MOPA Engine (GitHub Pages native)
+      // 1. Client-Side MOPA Engine (GitHub Pages Native)
       if (typeof MopaEngine !== 'undefined') {
         const res = await MopaEngine.generate(payload);
         if (res.success && res.imageData) {
@@ -656,7 +690,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // 2. Fallback: Local Python Flask API (if available)
+      // 2. Fallback: Local Flask API
       const resp = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -683,6 +717,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       stageLoading.classList.add('hidden');
       isRendering = false;
+      if (queuedRender) {
+        queuedRender = false;
+        renderEngraving();
+      }
     }
   }
 
@@ -754,7 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     batchProgressArea.classList.remove('hidden');
     batchStatusText.textContent = `Rendering (0/${items.length})...`;
-    batchProgressBar.style.width = '0%';
+    if (batchProgressBar) batchProgressBar.style.width = '0%';
     runBatchBtn.disabled = true;
 
     const settings = getActiveSimulationSettings();
@@ -762,12 +800,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const usedNames = new Set();
 
     try {
-      // Use Client-Side MOPA Engine directly
       if (typeof MopaEngine !== 'undefined') {
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
           batchStatusText.textContent = `Rendering (${i + 1}/${items.length}): ${item.slice(0, 15)}...`;
-          batchProgressBar.style.width = `${Math.round(((i + 1) / items.length) * 100)}%`;
+          if (batchProgressBar) {
+            batchProgressBar.style.width = `${Math.round(((i + 1) / items.length) * 100)}%`;
+          }
 
           const res = await MopaEngine.generate({
             text: item,
@@ -788,7 +827,6 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
       } else {
-        // Fallback to server endpoint
         const resp = await fetch('/api/batch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -809,7 +847,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (generatedImages.length > 0) {
         showToast(`Generated ${generatedImages.length} images. Downloading all...`, 'success');
 
-        // Sequentially trigger browser downloads for each transparent PNG
         for (let i = 0; i < generatedImages.length; i++) {
           const item = generatedImages[i];
           const a = document.createElement('a');

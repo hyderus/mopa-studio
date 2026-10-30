@@ -174,7 +174,18 @@
       };
     }
 
-    const fontFamily = params.font_family || params.font_id || 'Work Sans';
+    let rawFont = (params.font_family || params.font_id || 'Work Sans').toString();
+    let fontFamily = 'Work Sans';
+    if (rawFont.toLowerCase().includes('arial')) {
+      fontFamily = 'Arial Bold';
+    } else if (rawFont.toLowerCase().includes('consolas')) {
+      fontFamily = 'Consolas';
+    } else if (rawFont.toLowerCase().includes('impact')) {
+      fontFamily = 'Impact';
+    } else if (!rawFont.toLowerCase().includes('work') && !rawFont.toLowerCase().includes('sans')) {
+      fontFamily = rawFont.replace(/\.[^/.]+$/, '').trim() || 'Work Sans';
+    }
+
     const fontSize = parseInt(params.font_size, 10) || 281;
     const strokeThickness = parseFloat(params.stroke_thickness) || 6.5;
     const letterSpacing = parseInt(params.letter_spacing, 10) || 20;
@@ -199,12 +210,21 @@
     const cMid = hexToRgb(params.c_mid_hex || '#c99762', [201, 151, 98]);
     const cLight = hexToRgb(params.c_light_hex || '#f2d39e', [242, 211, 158]);
 
+    // Force font load into browser layout engine
+    if (typeof document !== 'undefined' && document.fonts && document.fonts.load) {
+      try {
+        await document.fonts.load(`bold ${fontSize}px "${fontFamily}"`);
+        await document.fonts.load(`bold ${fontSize}px "Work Sans"`);
+        await document.fonts.ready;
+      } catch (e) {}
+    }
+
     // 1. Render Base Text Mask on Offscreen Canvas
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
     // Font string: support variable/bold weight
-    const fontSpec = `bold ${fontSize}px "${fontFamily}", sans-serif`;
+    const fontSpec = `bold ${fontSize}px "${fontFamily}", "Work Sans", sans-serif`;
     ctx.font = fontSpec;
 
     // Measure character dimensions and track spacing
@@ -215,7 +235,7 @@
     for (let i = 0; i < charList.length; i++) {
       const ch = charList[i];
       const m = ctx.measureText(ch);
-      const cw = Math.max(m.width, m.actualBoundingBoxRight ? (m.actualBoundingBoxRight - (m.actualBoundingBoxLeft || 0)) : m.width);
+      const cw = m.width;
       charMetrics.push({ ch, cw, metrics: m });
       totalTextWidth += cw + (i < charList.length - 1 ? letterSpacing : 0);
     }
