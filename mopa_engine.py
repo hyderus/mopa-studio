@@ -71,10 +71,7 @@ def generate_mopa_image(
     if not os.path.exists(font_path):
         for candidate in [
             "fonts/bundled/WorkSans-VariableFont_wght.ttf",
-            r"C:\Users\hosom\Downloads\Work_Sans\WorkSans-VariableFont_wght.ttf",
-            "fonts/bundled/Arial-Bold.ttf",
-            "fonts/bundled/Consolas.ttf",
-            "C:/Windows/Fonts/arialbd.ttf"
+            r"C:\Users\hosom\Downloads\Work_Sans\WorkSans-VariableFont_wght.ttf"
         ]:
             if os.path.exists(candidate):
                 font_path = candidate

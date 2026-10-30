@@ -176,13 +176,7 @@
 
     let rawFont = (params.font_family || params.font_id || 'Work Sans').toString();
     let fontFamily = 'Work Sans';
-    if (rawFont.toLowerCase().includes('arial')) {
-      fontFamily = 'Arial Bold';
-    } else if (rawFont.toLowerCase().includes('consolas')) {
-      fontFamily = 'Consolas';
-    } else if (rawFont.toLowerCase().includes('impact')) {
-      fontFamily = 'Impact';
-    } else if (!rawFont.toLowerCase().includes('work') && !rawFont.toLowerCase().includes('sans')) {
+    if (!rawFont.toLowerCase().includes('work') && !rawFont.toLowerCase().includes('sans')) {
       fontFamily = rawFont.replace(/\.[^/.]+$/, '').trim() || 'Work Sans';
     }
 

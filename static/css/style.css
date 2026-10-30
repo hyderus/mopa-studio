@@ -11,28 +11,6 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'Arial Bold';
-  src: url('../../fonts/bundled/Arial-Bold.ttf') format('truetype');
-  font-weight: bold;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Consolas';
-  src: url('../../fonts/bundled/Consolas.ttf') format('truetype');
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Impact';
-  src: url('../../fonts/bundled/Impact.ttf') format('truetype');
-  font-style: normal;
-  font-display: swap;
-}
-
 /* Light Theme Variables (Default) */
 :root {
   --bg-page: #f5f5f7;

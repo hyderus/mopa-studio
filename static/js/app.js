@@ -163,9 +163,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (opt.dataset && opt.dataset.fontFamily) return opt.dataset.fontFamily;
     const val = (opt.value || '').toLowerCase();
     if (val.includes('work') || val.includes('sans')) return 'Work Sans';
-    if (val.includes('arial')) return 'Arial Bold';
-    if (val.includes('consolas')) return 'Consolas';
-    if (val.includes('impact')) return 'Impact';
     return opt.dataset.name || opt.textContent.trim() || 'Work Sans';
   }
 
@@ -479,10 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Font Management & Catalog ---
   async function loadFontCatalog(selectFontId = 'WorkSans-VariableFont_wght.ttf') {
     const defaultFonts = [
-      { id: 'WorkSans-VariableFont_wght.ttf', name: 'Work Sans', fontFamily: 'Work Sans', filename: 'WorkSans-VariableFont_wght.ttf', category: 'bundled', size_kb: 351.2, url: 'fonts/bundled/WorkSans-VariableFont_wght.ttf' },
-      { id: 'Arial-Bold.ttf', name: 'Arial Bold', fontFamily: 'Arial Bold', filename: 'Arial-Bold.ttf', category: 'bundled', size_kb: 966.6, url: 'fonts/bundled/Arial-Bold.ttf' },
-      { id: 'Consolas.ttf', name: 'Consolas', fontFamily: 'Consolas', filename: 'Consolas.ttf', category: 'bundled', size_kb: 442.5, url: 'fonts/bundled/Consolas.ttf' },
-      { id: 'Impact.ttf', name: 'Impact', fontFamily: 'Impact', filename: 'Impact.ttf', category: 'bundled', size_kb: 201.9, url: 'fonts/bundled/Impact.ttf' }
+      { id: 'WorkSans-VariableFont_wght.ttf', name: 'Work Sans', fontFamily: 'Work Sans', filename: 'WorkSans-VariableFont_wght.ttf', category: 'bundled', size_kb: 109.0, url: 'fonts/bundled/WorkSans-VariableFont_wght.ttf' }
     ];
 
     let fontCatalog = [...defaultFonts];

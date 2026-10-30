@@ -137,20 +137,12 @@ def list_fonts():
                 full = os.path.join(BUNDLED_FONTS_DIR, f)
                 fonts.append(get_font_info(full, "bundled"))
 
-    # 2. Uploaded fonts
+    # 2. Uploaded custom fonts
     if os.path.exists(UPLOADED_FONTS_DIR):
         for f in sorted(os.listdir(UPLOADED_FONTS_DIR)):
             if is_allowed_font(f):
                 full = os.path.join(UPLOADED_FONTS_DIR, f)
                 fonts.append(get_font_info(full, "uploaded"))
-
-    # 3. Popular system fonts
-    win_fonts = os.environ.get("WINDIR", "C:\\Windows") + "\\Fonts"
-    sys_candidates = ["segoeui.ttf", "segoeuib.ttf", "arial.ttf", "impact.ttf", "tahoma.ttf", "verdana.ttf"]
-    for sc in sys_candidates:
-        full = os.path.join(win_fonts, sc)
-        if os.path.exists(full) and not any(x["filename"].lower() == sc.lower() for x in fonts):
-            fonts.append(get_font_info(full, "system"))
 
     return jsonify({"fonts": fonts})
 
