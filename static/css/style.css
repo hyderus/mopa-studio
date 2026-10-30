@@ -1056,7 +1056,7 @@ body.dark-theme .sidebar-footer {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   transition: background 0.25s ease;
-  overflow: hidden;
+  overflow: auto;
 }
 
 /* Stage Substrates */
@@ -1081,17 +1081,20 @@ body.dark-theme .surface-checkerboard {
 }
 
 .surface-metal {
-  background: 
+  background-color: #111827 !important;
+  background-image: 
     repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 6px),
-    linear-gradient(180deg, #1f2937 0%, #111827 100%);
+    linear-gradient(180deg, #1f2937 0%, #111827 100%) !important;
 }
 
 .surface-black {
-  background-color: #000000;
+  background-color: #000000 !important;
+  background-image: none !important;
 }
 
 .surface-white {
-  background-color: #ffffff;
+  background-color: #ffffff !important;
+  background-image: none !important;
 }
 
 /* Rendered Output Image Box */

@@ -337,20 +337,65 @@ document.addEventListener('DOMContentLoaded', () => {
     setupColorPicker(colorMidPicker, colorMidHex);
     setupColorPicker(colorLightPicker, colorLightHex);
 
-    // Surface Preview Switches
-    document.querySelectorAll('input[name="surface"]').forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        const target = interactiveStage || stageContainer;
-        if (target) {
-          target.className = 'stage-canvas surface-' + e.target.value;
+    // Surface Preview Switches (.substrate-chip: Grid, Metal, Black, White)
+    const substrateChips = document.querySelectorAll('.substrate-chip');
+    substrateChips.forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        e.preventDefault();
+        substrateChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+
+        const bg = chip.dataset.bg || 'checkerboard';
+        const surfaceClass = 'surface-' + bg;
+
+        if (interactiveStage) {
+          interactiveStage.className = 'stage-canvas ' + surfaceClass;
+        }
+        if (stageContainer) {
+          stageContainer.classList.remove('surface-checkerboard', 'surface-metal', 'surface-black', 'surface-white');
+          stageContainer.classList.add(surfaceClass);
         }
       });
     });
 
-    // Zoom Controls
-    if (zoomInBtn) zoomInBtn.addEventListener('click', () => adjustZoom(0.25));
-    if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => adjustZoom(-0.25));
-    if (zoomResetBtn) zoomResetBtn.addEventListener('click', () => setZoom(1.0));
+    // Zoom Controls (+, -, Fit)
+    if (zoomInBtn) {
+      zoomInBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        adjustZoom(0.25);
+      });
+    }
+    if (zoomOutBtn) {
+      zoomOutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        adjustZoom(-0.25);
+      });
+    }
+    if (zoomResetBtn) {
+      zoomResetBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        fitImageToView();
+      });
+    }
+    if (zoomLevel) {
+      zoomLevel.style.cursor = 'pointer';
+      zoomLevel.title = 'Click to toggle 100% / 200%';
+      zoomLevel.addEventListener('click', () => {
+        setZoom(currentZoom === 1.0 ? 2.0 : 1.0);
+      });
+    }
+
+    // Mouse Wheel Zoom over stage
+    const zoomTarget = interactiveStage || stageContainer;
+    if (zoomTarget) {
+      zoomTarget.addEventListener('wheel', (e) => {
+        if (e.ctrlKey || e.metaKey || (mopaOutputImage && mopaOutputImage.style.display !== 'none')) {
+          e.preventDefault();
+          const delta = e.deltaY < 0 ? 0.2 : -0.2;
+          adjustZoom(delta);
+        }
+      }, { passive: false });
+    }
 
     // Copy to Clipboard
     if (copyBtn) copyBtn.addEventListener('click', copyImageToClipboard);
@@ -741,13 +786,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Zoom Controls ---
   function adjustZoom(delta) {
-    setZoom(currentZoom + delta);
+    setZoom(Math.round((currentZoom + delta) * 100) / 100);
   }
 
   function setZoom(val) {
-    currentZoom = Math.max(0.25, Math.min(val, 5.0));
-    imageWrapper.style.transform = `scale(${currentZoom})`;
-    zoomLevel.textContent = `${Math.round(currentZoom * 100)}%`;
+    currentZoom = Math.max(0.2, Math.min(val, 6.0));
+    if (imageWrapper) {
+      imageWrapper.style.transform = `scale(${currentZoom})`;
+    }
+    if (zoomLevel) {
+      zoomLevel.textContent = `${Math.round(currentZoom * 100)}%`;
+    }
+  }
+
+  function fitImageToView() {
+    if (!mopaOutputImage || !mopaOutputImage.naturalWidth || mopaOutputImage.style.display === 'none') {
+      setZoom(1.0);
+      return;
+    }
+    const container = interactiveStage || stageContainer;
+    if (!container) {
+      setZoom(1.0);
+      return;
+    }
+    const availW = container.clientWidth - 48;
+    const availH = container.clientHeight - 48;
+    const imgW = mopaOutputImage.naturalWidth;
+    const imgH = mopaOutputImage.naturalHeight;
+    if (availW > 50 && availH > 50 && imgW > 0 && imgH > 0) {
+      const scale = Math.min(1.0, availW / imgW, availH / imgH);
+      setZoom(Math.max(0.25, Math.round(scale * 100) / 100));
+    } else {
+      setZoom(1.0);
+    }
   }
 
   // --- Copy to Clipboard ---
