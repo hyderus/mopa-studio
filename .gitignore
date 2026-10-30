@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+output/*.png
+!output/.gitkeep
+.vscode/
+.idea/
+*.raw
+base_mask_test.png

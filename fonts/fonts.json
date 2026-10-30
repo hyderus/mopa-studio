@@ -1,0 +1,34 @@
+[
+  {
+    "id": "WorkSans-VariableFont_wght.ttf",
+    "name": "Work Sans",
+    "filename": "WorkSans-VariableFont_wght.ttf",
+    "category": "bundled",
+    "size_kb": 351.2,
+    "url": "fonts/bundled/WorkSans-VariableFont_wght.ttf"
+  },
+  {
+    "id": "Arial-Bold.ttf",
+    "name": "Arial Bold",
+    "filename": "Arial-Bold.ttf",
+    "category": "bundled",
+    "size_kb": 966.6,
+    "url": "fonts/bundled/Arial-Bold.ttf"
+  },
+  {
+    "id": "Consolas.ttf",
+    "name": "Consolas",
+    "filename": "Consolas.ttf",
+    "category": "bundled",
+    "size_kb": 442.5,
+    "url": "fonts/bundled/Consolas.ttf"
+  },
+  {
+    "id": "Impact.ttf",
+    "name": "Impact",
+    "filename": "Impact.ttf",
+    "category": "bundled",
+    "size_kb": 201.9,
+    "url": "fonts/bundled/Impact.ttf"
+  }
+]
