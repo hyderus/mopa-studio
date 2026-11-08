@@ -193,12 +193,12 @@
     const burrShiftY = parseFloat(params.burr_shift_y) || 1.0;
     const burrWeight = parseFloat(params.burr_weight) || 0.7;
     const jitterRange = parseInt(params.jitter_range, 10) || 5;
-    const outerLipIntensity = parseFloat(params.outer_lip_intensity) || 0.16;
-    const outerLipDist = parseFloat(params.outer_lip_dist) || 2.5;
-    const innerTrenchIntensity = parseFloat(params.inner_trench_intensity) || 0.3;
-    const innerTrenchDist = parseFloat(params.inner_trench_dist) || 6.5;
-    const slagNoiseWeight = parseFloat(params.slag_noise_weight) || 0.45;
-    const fineNoiseWeight = parseFloat(params.fine_noise_weight) || 0.08;
+    const outerLipIntensity = typeof params.outer_lip_intensity !== 'undefined' ? parseFloat(params.outer_lip_intensity) : 0.18;
+    const outerLipDist = typeof params.outer_lip_dist !== 'undefined' ? parseFloat(params.outer_lip_dist) : 2.8;
+    const innerTrenchIntensity = typeof params.inner_trench_intensity !== 'undefined' ? parseFloat(params.inner_trench_intensity) : 0.28;
+    const innerTrenchDist = typeof params.inner_trench_dist !== 'undefined' ? parseFloat(params.inner_trench_dist) : 7.5;
+    const slagNoiseWeight = typeof params.slag_noise_weight !== 'undefined' ? parseFloat(params.slag_noise_weight) : 0.40;
+    const fineNoiseWeight = typeof params.fine_noise_weight !== 'undefined' ? parseFloat(params.fine_noise_weight) : 0.06;
 
     const cDark = hexToRgb(params.c_dark_hex || '#7e7268', [126, 114, 104]);
     const cMid = hexToRgb(params.c_mid_hex || '#a69583', [166, 149, 131]);
@@ -288,97 +288,32 @@
       }
     }
 
-    // 3. Precision Laser Micro-Ablation (Authentic Sub-Pixel Roughness, Zero Sawteeth)
-    const bx = Math.min(1.2, burrShiftX * 0.2);
-    const by = Math.min(0.5, burrShiftY * 0.2);
-    const bw = burrWeight * 0.25;
-    const jr = Math.min(1, Math.round(jitterRange * 0.2));
+    // 3. Smooth Optical & Thermal Laser Edge Transition (TEM00 Gaussian Beam Profile)
+    // Eliminates harsh pixelated stair-steps and sawteeth with organic optical Gaussian falloff
+    const smoothMask = gaussianBlur2D(baseMask, w, h, 1.6, 3);
 
-    const burrLayer = new Float32Array(w * h);
-    const invPitch = 1.0 / pitch;
-
-    for (let y = 0; y < h; y++) {
-      const rowOffset = y * w;
-      const srcY = y - by;
-      const y0 = Math.floor(srcY);
-      const dy = srcY - y0;
-
-      for (let x = 0; x < w; x++) {
-        let phase = ((y + x * sawAngle) % pitch + pitch) % pitch * invPitch;
-        if (phase > teethThreshold) {
-          const srcX = x - bx;
-          const x0 = Math.floor(srcX);
-          const dx = srcX - x0;
-
-          if (x0 >= 0 && x0 + 1 < w && y0 >= 0 && y0 + 1 < h) {
-            const i00 = y0 * w + x0;
-            const v = (1 - dx) * (1 - dy) * baseMask[i00] +
-                      dx * (1 - dy) * baseMask[i00 + 1] +
-                      (1 - dx) * dy * baseMask[i00 + w] +
-                      dx * dy * baseMask[i00 + w + 1];
-            burrLayer[rowOffset + x] = v;
-          } else if (x0 >= 0 && x0 < w && y0 >= 0 && y0 < h) {
-            burrLayer[rowOffset + x] = baseMask[y0 * w + x0];
-          }
-        }
-      }
-    }
-
-    // 4. Scan-Line Edge Jitter
-    const rng = createRNG(seed);
-    const span = jr * 2 + 1;
-    const jitteredMask = new Float32Array(w * h);
-
-    for (let y = 0; y < h; y++) {
-      const rowOffset = y * w;
-      const j = jr > 0 ? (Math.floor(rng() * span) - jr) : 0;
-
-      for (let x = 0; x < w; x++) {
-        let sx = x - j;
-        if (sx < 0) sx = (sx % w + w) % w;
-        else if (sx >= w) sx = sx % w;
-        jitteredMask[rowOffset + x] = baseMask[rowOffset + sx];
-      }
-    }
-
-    // 5. Combined Burrs & Solid Mask Formation - Preserving Sharp 90-Degree Corners
-    const combined = new Float32Array(w * h);
+    // 4. Exact Distance Transform for Laser Trench & Raised Melt Recast Lip
+    const bgSources = new Uint8Array(w * h);
     for (let i = 0; i < w * h; i++) {
-      combined[i] = Math.max(baseMask[i], Math.max(jitteredMask[i] * 0.95, burrLayer[i] * bw));
+      bgSources[i] = (baseMask[i] > 0.4) ? 0 : 1;
     }
+    const dist = edt2d(bgSources, w, h);
 
-    // Sub-pixel edge smoothing (preserves 90-degree vector corners without heavy isotropic blurring)
-    const combinedSubpixel = gaussianBlur2D(combined, w, h, 0.3, 1);
-    const solidMaskSources = new Uint8Array(w * h);
-    const solidMask = new Uint8Array(w * h);
-
-    for (let i = 0; i < w * h; i++) {
-      if (combinedSubpixel[i] > 0.35) {
-        solidMask[i] = 255;
-        solidMaskSources[i] = 0;
-      } else {
-        solidMask[i] = 0;
-        solidMaskSources[i] = 1;
-      }
-    }
-
-    // 6. Laser Trench Distance Transform
-    const dist = edt2d(solidMaskSources, w, h);
-
-    // 7. Raised Melt Lip & Inner Trench Grooves
+    // Raised recast lip (bright highlight bead near edge) and recessed groove depth
     const outerLip = new Float32Array(w * h);
     const innerTrench = new Float32Array(w * h);
 
     for (let i = 0; i < w * h; i++) {
       const d = dist[i];
       const dl = d - outerLipDist;
-      outerLip[i] = Math.exp(-(dl * dl) / 3.0) * outerLipIntensity;
+      outerLip[i] = Math.exp(-(dl * dl) / 6.0) * outerLipIntensity;
 
       const dt = d - innerTrenchDist;
-      innerTrench[i] = -Math.exp(-(dt * dt) / 5.0) * innerTrenchIntensity;
+      innerTrench[i] = -Math.exp(-(dt * dt) / 12.0) * innerTrenchIntensity;
     }
 
-    // 8. Slag Texture & Fine Optical Micro-Noise
+    // 5. Organic Melt Slag & Laser Raster Scan Micro-Hatch
+    const rng = createRNG(seed);
     const cw = Math.max(1, Math.floor(w / 7));
     const ch = Math.max(1, Math.floor(h / 4));
     const coarse = new Float32Array(cw * ch);
@@ -418,21 +353,17 @@
     for (let i = 0; i < w * h; i++) fineNoiseRaw[i] = normalRandom(rng);
     const fineNoise = gaussianBlur2D(fineNoiseRaw, w, h, 0.8, 1);
 
-    // 9. Height Map & Oxidation Dual-Branch Colors - Crisp Boundary Definition
-    const alphaChannel = new Uint8ClampedArray(w * h);
-    for (let i = 0; i < w * h; i++) {
-      if (solidMask[i] > 0) {
-        let a = Math.round(combinedSubpixel[i] * 255.0);
-        alphaChannel[i] = Math.max(220, Math.min(255, a));
-      } else {
-        alphaChannel[i] = 0;
-      }
-    }
+    const invPitch = (2.0 * Math.PI) / Math.max(2.0, pitch);
 
+    // 6. Height Map & Oxidation Dual-Branch Colors
     const rgba = new Uint8ClampedArray(w * h * 4);
 
     for (let i = 0; i < w * h; i++) {
-      let hm = 0.58 + (slag[i] - 0.5) * slagNoiseWeight + fineNoise[i] * fineNoiseWeight + outerLip[i] + innerTrench[i];
+      const y = Math.floor(i / w);
+      const x = i - y * w;
+      const scanHatch = Math.cos((y + x * sawAngle) * invPitch) * 0.07;
+
+      let hm = 0.56 + (slag[i] - 0.5) * slagNoiseWeight + fineNoise[i] * fineNoiseWeight + scanHatch + outerLip[i] + innerTrench[i];
       if (hm < 0) hm = 0;
       else if (hm > 1) hm = 1;
 
@@ -449,8 +380,9 @@
         b = cMid[2] + (cLight[2] - cMid[2]) * t;
       }
 
-      let edge = dist[i] / 2.0;
-      if (edge < 0.4) edge = 0.4;
+      // Smooth Heat Affected Zone (HAZ) edge darkening seamlessly blending into chassis
+      let edge = dist[i] / 3.5;
+      if (edge < 0.48) edge = 0.48;
       else if (edge > 1.0) edge = 1.0;
 
       r *= edge;
@@ -461,16 +393,16 @@
       rgba[idx] = Math.min(255, Math.max(0, Math.round(r)));
       rgba[idx + 1] = Math.min(255, Math.max(0, Math.round(g)));
       rgba[idx + 2] = Math.min(255, Math.max(0, Math.round(b)));
-      rgba[idx + 3] = alphaChannel[i];
+      rgba[idx + 3] = Math.min(255, Math.max(0, Math.round(smoothMask[i] * 255.0)));
     }
 
-    // 10. Tight Bounding Box Auto-Crop
+    // 7. Tight Bounding Box Auto-Crop Around Rendered Text
     let minX = w, maxX = 0, minY = h, maxY = 0;
     let hasPixels = false;
 
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
-        if (rgba[(y * w + x) * 4 + 3] > 0) {
+        if (rgba[(y * w + x) * 4 + 3] > 2) {
           hasPixels = true;
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
