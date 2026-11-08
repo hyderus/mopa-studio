@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
       font_id: fontId,
       font_family: fontFamily,
       font_size: parseInt(getVal('fontSizeInput', 281), 10),
-      stroke_thickness: getVal('strokeThicknessInput', 6.5),
+      stroke_thickness: getVal('strokeThicknessInput', 0.0),
       letter_spacing: parseInt(getVal('letterSpacingInput', 20), 10),
       crop_pad: parseInt(getVal('cropPadInput', 4), 10),
       seed: parseInt(seedInput ? seedInput.value : 18780, 10) || 18780,
@@ -195,12 +195,12 @@ document.addEventListener('DOMContentLoaded', () => {
       inner_trench_dist: 6.5,
       slag_noise_weight: getVal('slagNoiseInput', 0.45),
       fine_noise_weight: 0.08,
-      burr_shift_x: 5.5,
-      burr_shift_y: 1.5,
-      burr_weight: 0.9,
-      c_dark_hex: colorDarkHex ? colorDarkHex.value : '#4a2c14',
-      c_mid_hex: colorMidHex ? colorMidHex.value : '#c99762',
-      c_light_hex: colorLightHex ? colorLightHex.value : '#f2d39e'
+      burr_shift_x: 4.0,
+      burr_shift_y: 1.0,
+      burr_weight: 0.7,
+      c_dark_hex: colorDarkHex ? colorDarkHex.value : '#7e7268',
+      c_mid_hex: colorMidHex ? colorMidHex.value : '#a69583',
+      c_light_hex: colorLightHex ? colorLightHex.value : '#c0ae9b'
     };
   }
 

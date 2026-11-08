@@ -190,9 +190,9 @@ def generate():
     font_id = data.get("font_id", "WorkSans-VariableFont_wght.ttf")
     font_path = resolve_font_path(font_id)
 
-    # Defaults matching user specifications
+    # Defaults matching calibrated laser physics specifications
     font_size = int(data.get("font_size", 281))
-    stroke_thickness = float(data.get("stroke_thickness", 6.5))
+    stroke_thickness = float(data.get("stroke_thickness", 0.0))
     letter_spacing = int(data.get("letter_spacing", 20))
     crop_pad = int(data.get("crop_pad", 4))
     
@@ -200,9 +200,9 @@ def generate():
     pitch = float(data.get("pitch", 13.0))
     teeth_threshold = float(data.get("teeth_threshold", 0.25))
     saw_angle = float(data.get("saw_angle", 0.45))
-    burr_shift_x = float(data.get("burr_shift_x", 5.5))
-    burr_shift_y = float(data.get("burr_shift_y", 1.5))
-    burr_weight = float(data.get("burr_weight", 0.9))
+    burr_shift_x = float(data.get("burr_shift_x", 4.0))
+    burr_shift_y = float(data.get("burr_shift_y", 1.0))
+    burr_weight = float(data.get("burr_weight", 0.7))
     jitter_range = int(data.get("jitter_range", 5))
     outer_lip_intensity = float(data.get("outer_lip_intensity", 0.16))
     outer_lip_dist = float(data.get("outer_lip_dist", 2.5))
@@ -210,9 +210,9 @@ def generate():
     inner_trench_dist = float(data.get("inner_trench_dist", 6.5))
     slag_noise_weight = float(data.get("slag_noise_weight", 0.45))
     fine_noise_weight = float(data.get("fine_noise_weight", 0.08))
-    c_dark_hex = data.get("c_dark_hex", "#4a2c14")
-    c_mid_hex = data.get("c_mid_hex", "#c99762")
-    c_light_hex = data.get("c_light_hex", "#f2d39e")
+    c_dark_hex = data.get("c_dark_hex", "#7e7268")
+    c_mid_hex = data.get("c_mid_hex", "#a69583")
+    c_light_hex = data.get("c_light_hex", "#c0ae9b")
 
     t0 = time.time()
     

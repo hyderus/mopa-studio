@@ -181,17 +181,17 @@
     }
 
     const fontSize = parseInt(params.font_size, 10) || 281;
-    const strokeThickness = parseFloat(params.stroke_thickness) || 6.5;
-    const letterSpacing = parseInt(params.letter_spacing, 10) || 20;
-    const cropPad = parseInt(params.crop_pad, 10) || 4;
+    const strokeThickness = typeof params.stroke_thickness !== 'undefined' ? parseFloat(params.stroke_thickness) : 0.0;
+    const letterSpacing = typeof params.letter_spacing !== 'undefined' ? parseInt(params.letter_spacing, 10) : 20;
+    const cropPad = typeof params.crop_pad !== 'undefined' ? parseInt(params.crop_pad, 10) : 4;
 
     const seed = parseInt(params.seed, 10) || 18780;
     const pitch = parseFloat(params.pitch) || 13.0;
     const teethThreshold = parseFloat(params.teeth_threshold) || 0.25;
     const sawAngle = parseFloat(params.saw_angle) || 0.45;
-    const burrShiftX = parseFloat(params.burr_shift_x) || 5.5;
-    const burrShiftY = parseFloat(params.burr_shift_y) || 1.5;
-    const burrWeight = parseFloat(params.burr_weight) || 0.9;
+    const burrShiftX = parseFloat(params.burr_shift_x) || 4.0;
+    const burrShiftY = parseFloat(params.burr_shift_y) || 1.0;
+    const burrWeight = parseFloat(params.burr_weight) || 0.7;
     const jitterRange = parseInt(params.jitter_range, 10) || 5;
     const outerLipIntensity = parseFloat(params.outer_lip_intensity) || 0.16;
     const outerLipDist = parseFloat(params.outer_lip_dist) || 2.5;
@@ -200,9 +200,9 @@
     const slagNoiseWeight = parseFloat(params.slag_noise_weight) || 0.45;
     const fineNoiseWeight = parseFloat(params.fine_noise_weight) || 0.08;
 
-    const cDark = hexToRgb(params.c_dark_hex || '#4a2c14', [74, 44, 20]);
-    const cMid = hexToRgb(params.c_mid_hex || '#c99762', [201, 151, 98]);
-    const cLight = hexToRgb(params.c_light_hex || '#f2d39e', [242, 211, 158]);
+    const cDark = hexToRgb(params.c_dark_hex || '#7e7268', [126, 114, 104]);
+    const cMid = hexToRgb(params.c_mid_hex || '#a69583', [166, 149, 131]);
+    const cLight = hexToRgb(params.c_light_hex || '#c0ae9b', [192, 174, 155]);
 
     // Force font load into browser layout engine
     if (typeof document !== 'undefined' && document.fonts && document.fonts.load) {
@@ -336,18 +336,19 @@
       }
     }
 
-    // 5. Combined Burrs & Solid Mask Formation
+    // 5. Combined Burrs & Solid Mask Formation - Preserving Sharp 90-Degree Corners
     const combined = new Float32Array(w * h);
     for (let i = 0; i < w * h; i++) {
-      combined[i] = Math.max(jitteredMask[i], burrLayer[i] * burrWeight);
+      combined[i] = Math.max(baseMask[i], Math.max(jitteredMask[i] * 0.9, burrLayer[i] * burrWeight));
     }
 
-    const combinedBlur = gaussianBlur2D(combined, w, h, 1.0, 2);
+    // Sub-pixel edge smoothing (preserves 90-degree vector corners without heavy isotropic blurring)
+    const combinedSubpixel = gaussianBlur2D(combined, w, h, 0.35, 1);
     const solidMaskSources = new Uint8Array(w * h);
     const solidMask = new Uint8Array(w * h);
 
     for (let i = 0; i < w * h; i++) {
-      if (combinedBlur[i] > 0.38) {
+      if (combinedSubpixel[i] > 0.35) {
         solidMask[i] = 255;
         solidMaskSources[i] = 0;
       } else {
@@ -412,10 +413,16 @@
     for (let i = 0; i < w * h; i++) fineNoiseRaw[i] = normalRandom(rng);
     const fineNoise = gaussianBlur2D(fineNoiseRaw, w, h, 0.8, 1);
 
-    // 9. Height Map & Oxidation Dual-Branch Colors
-    const solidMaskFloat = new Float32Array(w * h);
-    for (let i = 0; i < w * h; i++) solidMaskFloat[i] = solidMask[i];
-    const alphaBlur = gaussianBlur2D(solidMaskFloat, w, h, 0.6, 1);
+    // 9. Height Map & Oxidation Dual-Branch Colors - Crisp Boundary Definition
+    const alphaChannel = new Uint8ClampedArray(w * h);
+    for (let i = 0; i < w * h; i++) {
+      if (solidMask[i] > 0) {
+        let a = Math.round(combinedSubpixel[i] * 255.0);
+        alphaChannel[i] = Math.max(220, Math.min(255, a));
+      } else {
+        alphaChannel[i] = 0;
+      }
+    }
 
     const rgba = new Uint8ClampedArray(w * h * 4);
 
@@ -438,7 +445,7 @@
       }
 
       let edge = dist[i] / 2.0;
-      if (edge < 0.35) edge = 0.35;
+      if (edge < 0.4) edge = 0.4;
       else if (edge > 1.0) edge = 1.0;
 
       r *= edge;
@@ -449,7 +456,7 @@
       rgba[idx] = Math.min(255, Math.max(0, Math.round(r)));
       rgba[idx + 1] = Math.min(255, Math.max(0, Math.round(g)));
       rgba[idx + 2] = Math.min(255, Math.max(0, Math.round(b)));
-      rgba[idx + 3] = Math.min(255, Math.max(0, Math.round(alphaBlur[i])));
+      rgba[idx + 3] = alphaChannel[i];
     }
 
     // 10. Tight Bounding Box Auto-Crop

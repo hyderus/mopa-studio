@@ -150,15 +150,15 @@
           </div>
         </div>
 
-        <!-- Stroke Thickness (Weight): Default 6.5 px -->
+        <!-- Stroke Thickness (Weight): Default 0.0 px (Calibrated Vector Sharpness) -->
         <div class="control-row">
           <div class="row-header">
             <label for="strokeThicknessInput" class="row-label">Stroke Thickness (Weight)</label>
             <div class="val-pill">
-              <input type="number" id="strokeThicknessVal" class="num-box" min="-8" max="15" step="0.5" value="6.5" /> px
+              <input type="number" id="strokeThicknessVal" class="num-box" min="-8" max="15" step="0.5" value="0.0" /> px
             </div>
           </div>
-          <input type="range" id="strokeThicknessInput" min="-8" max="15" step="0.5" value="6.5" class="range-slider" />
+          <input type="range" id="strokeThicknessInput" min="-8" max="15" step="0.5" value="0.0" class="range-slider" />
         </div>
 
         <!-- Font Size: Default 281 px -->
@@ -213,8 +213,8 @@
         <!-- Material Presets -->
         <div class="material-grid">
           <button type="button" class="material-btn active" data-preset="brass">
-            <span class="swatch-strip" style="background: linear-gradient(135deg, #4a2c14 0%, #c99762 50%, #f2d39e 100%)"></span>
-            <span class="material-title">Warm MOPA Brass</span>
+            <span class="swatch-strip" style="background: linear-gradient(135deg, #7e7268 0%, #a69583 50%, #c0ae9b 100%)"></span>
+            <span class="material-title">Chassis Laser Anodize</span>
             <span class="material-caption">Reference macro tone</span>
           </button>
 
@@ -248,24 +248,24 @@
           <div class="picker-cell">
             <span class="picker-label">Deep Trench</span>
             <div class="picker-field">
-              <input type="color" id="colorDarkPicker" value="#4a2c14" />
-              <input type="text" id="colorDarkHex" class="hex-box" value="#4a2c14" />
+              <input type="color" id="colorDarkPicker" value="#7e7268" />
+              <input type="text" id="colorDarkHex" class="hex-box" value="#7e7268" />
             </div>
           </div>
 
           <div class="picker-cell">
             <span class="picker-label">Mid Plane</span>
             <div class="picker-field">
-              <input type="color" id="colorMidPicker" value="#c99762" />
-              <input type="text" id="colorMidHex" class="hex-box" value="#c99762" />
+              <input type="color" id="colorMidPicker" value="#a69583" />
+              <input type="text" id="colorMidHex" class="hex-box" value="#a69583" />
             </div>
           </div>
 
           <div class="picker-cell">
             <span class="picker-label">Specular Peak</span>
             <div class="picker-field">
-              <input type="color" id="colorLightPicker" value="#f2d39e" />
-              <input type="text" id="colorLightHex" class="hex-box" value="#f2d39e" />
+              <input type="color" id="colorLightPicker" value="#c0ae9b" />
+              <input type="text" id="colorLightHex" class="hex-box" value="#c0ae9b" />
             </div>
           </div>
         </div>
