@@ -43,23 +43,9 @@ def generate_mopa_image(
     output_path=None
 ):
     """
-    Renders high-fidelity MOPA laser marked serial text with metallic melt trenches,
-    micro-burrs, and optical interference coloring on a transparent BGRA canvas.
-    Calibrated with razor-sharp vector corners matching authentic iPhone laser chassis engraving:
-      - Font: Work Sans (Calibrated Vector Proportions)
-      - Font Size: 281 px
-      - Stroke Thickness: 0.0 px (Natural SemiBold weight matching macro ratio ~0.17-0.18)
-      - Letter Spacing: 20 px (Tracking matching macro slot ratio)
-      - Crop Edge Margin: 4 px
-      - Sawtooth Burr Pitch: 13.0
-      - Galvo Scan Saw Angle: 0.45
-      - Burr Teeth Density: 0.25
-      - Scan-Line Edge Jitter: 5 px
-      - Raised Melt Lip Height: 0.16
-      - Inner Trench Depth: 0.3
-      - Melt Slag Texture Roughness: 0.45
-      - Random Noise Seed: 18780
-      - Trench Colors: #7e7268 (Dark Trench), #a69583 (Mid Metal), #c0ae9b (Peak Rim)
+    Renders high-fidelity MOPA laser marked serial text matching authentic iPhone
+    laser chassis engraving with straight vector contours, razor-sharp 90-degree
+    corners, and sub-pixel edge micro-roughness (no jagged/sawtooth artifacts).
     """
     if not text or not str(text).strip():
         empty_canvas = np.zeros((1, 1, 4), dtype=np.uint8)
@@ -133,44 +119,44 @@ def generate_mopa_image(
             thickened = np.clip(signed_dist + thick_val + 0.5, 0.0, 1.0)
             base_mask = thickened
 
-    # 2. Angled sawtooth edge burrs along galvo scan path
+    # 2. Precision Laser Micro-Ablation (Authentic Sub-Pixel Roughness, Zero Sawteeth)
     rng = np.random.default_rng(int(seed) if seed is not None else 18780)
     y_grid, x_grid = np.mgrid[0:h, 0:w].astype(np.float32)
+
+    # Scale burr and jitter to physical sub-pixel micro-roughness (never sprouting wild teeth)
+    bx = min(1.2, float(burr_shift_x) * 0.2)
+    by = min(0.5, float(burr_shift_y) * 0.2)
+    bw = float(burr_weight) * 0.25
+    jr = min(1, int(round(float(jitter_range) * 0.2)))
 
     pitch = max(1.0, float(pitch))
     saw_wave = ((y_grid + x_grid * float(saw_angle)) % pitch) / pitch
     teeth = (saw_wave > float(teeth_threshold)).astype(np.float32)
 
-    # Shift mask right and down to form protruding burrs on trailing edges
-    M_burr = np.float32([[1, 0, float(burr_shift_x)], [0, 1, float(burr_shift_y)]])
+    M_burr = np.float32([[1, 0, bx], [0, 1, by]])
     shifted_mask = cv2.warpAffine(base_mask, M_burr, (w, h))
     burr_layer = shifted_mask * teeth
 
-    # Fine random horizontal scan-line jitter along edges
-    jit_max = max(0, int(jitter_range))
-    if jit_max > 0:
-        row_jitter = rng.integers(-jit_max, jit_max + 1, size=(h, 1))
+    if jr > 0:
+        row_jitter = rng.integers(-jr, jr + 1, size=(h, 1))
         jittered_mask = np.zeros_like(base_mask)
         for y in range(h):
             jittered_mask[y, :] = np.roll(base_mask[y, :], int(row_jitter[y, 0]))
     else:
         jittered_mask = base_mask
 
-    # Preserve sharp corners:
-    # Instead of blurring the combined mask with large GaussianBlur(5,5) which rounds sharp 90-degree corners,
-    # we unite base_mask, jittered_mask, and trailing burrs, then apply minimal subpixel smoothing.
-    combined = np.maximum(base_mask, np.maximum(jittered_mask * 0.9, burr_layer * float(burr_weight)))
-    combined_subpixel = cv2.GaussianBlur(combined, (3, 3), 0.35)
+    # Vector base mask governs the clean printed perimeter while subpixel micro-texture gives laser grain
+    combined = np.maximum(base_mask, np.maximum(jittered_mask * 0.95, burr_layer * bw))
+    combined_subpixel = cv2.GaussianBlur(combined, (3, 3), 0.3)
     solid_mask = (combined_subpixel > 0.35).astype(np.uint8) * 255
 
     # 3. Internal laser trench and melted metal texture
     dist = cv2.distanceTransform(solid_mask, cv2.DIST_L2, 5)
 
-    # Galvo fill + contour pass: raised outer lip and dark inner trench
     outer_lip = np.exp(-((dist - float(outer_lip_dist)) ** 2) / 3.0) * float(outer_lip_intensity)
     inner_trench = -np.exp(-((dist - float(inner_trench_dist)) ** 2) / 5.0) * float(inner_trench_intensity)
 
-    # Pitted slag texture stretched slightly along horizontal scan axis
+    # Slag texture along horizontal raster
     coarse_noise = rng.normal(0, 1, (max(1, h // 4), max(1, w // 7))).astype(np.float32)
     slag = cv2.resize(coarse_noise, (w, h), interpolation=cv2.INTER_CUBIC)
     slag = (slag - slag.min()) / (slag.max() - slag.min() + 1e-6)
@@ -187,7 +173,7 @@ def generate_mopa_image(
     )
     height_map = np.clip(height_map, 0.0, 1.0)
 
-    # 4. Map height values to colors (BGR order) calibrated to macro photo
+    # 4. Map height values to colors calibrated to macro photo
     c_dark = hex_to_bgr(c_dark_hex, [104, 114, 126])
     c_mid = hex_to_bgr(c_mid_hex, [131, 149, 166])
     c_light = hex_to_bgr(c_light_hex, [155, 174, 192])
@@ -202,14 +188,12 @@ def generate_mopa_image(
         c_mid + (c_light - c_mid) * t_high
     )
 
-    # Micro edge-darkening for crisp boundary definition against chassis
     edge_darken = np.clip(dist / 2.0, 0.4, 1.0)[..., None]
     bgr = bgr * edge_darken
 
     # 5. Crisp alpha channel preserving sharp 90-degree vector corners
     alpha = np.clip(combined_subpixel * 255.0, 0, 255).astype(np.uint8)
     alpha = np.where(solid_mask > 0, np.maximum(alpha, 220), 0).astype(np.uint8)
-    alpha = cv2.GaussianBlur(alpha, (3, 3), 0.3)
 
     bgra = np.dstack([bgr.astype(np.uint8), alpha])
 

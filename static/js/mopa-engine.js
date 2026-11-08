@@ -288,20 +288,25 @@
       }
     }
 
-    // 3. Sawtooth Burr Pattern
+    // 3. Precision Laser Micro-Ablation (Authentic Sub-Pixel Roughness, Zero Sawteeth)
+    const bx = Math.min(1.2, burrShiftX * 0.2);
+    const by = Math.min(0.5, burrShiftY * 0.2);
+    const bw = burrWeight * 0.25;
+    const jr = Math.min(1, Math.round(jitterRange * 0.2));
+
     const burrLayer = new Float32Array(w * h);
     const invPitch = 1.0 / pitch;
 
     for (let y = 0; y < h; y++) {
       const rowOffset = y * w;
-      const srcY = y - burrShiftY;
+      const srcY = y - by;
       const y0 = Math.floor(srcY);
       const dy = srcY - y0;
 
       for (let x = 0; x < w; x++) {
         let phase = ((y + x * sawAngle) % pitch + pitch) % pitch * invPitch;
         if (phase > teethThreshold) {
-          const srcX = x - burrShiftX;
+          const srcX = x - bx;
           const x0 = Math.floor(srcX);
           const dx = srcX - x0;
 
@@ -321,12 +326,12 @@
 
     // 4. Scan-Line Edge Jitter
     const rng = createRNG(seed);
-    const span = jitterRange * 2 + 1;
+    const span = jr * 2 + 1;
     const jitteredMask = new Float32Array(w * h);
 
     for (let y = 0; y < h; y++) {
       const rowOffset = y * w;
-      const j = Math.floor(rng() * span) - jitterRange;
+      const j = jr > 0 ? (Math.floor(rng() * span) - jr) : 0;
 
       for (let x = 0; x < w; x++) {
         let sx = x - j;
@@ -339,11 +344,11 @@
     // 5. Combined Burrs & Solid Mask Formation - Preserving Sharp 90-Degree Corners
     const combined = new Float32Array(w * h);
     for (let i = 0; i < w * h; i++) {
-      combined[i] = Math.max(baseMask[i], Math.max(jitteredMask[i] * 0.9, burrLayer[i] * burrWeight));
+      combined[i] = Math.max(baseMask[i], Math.max(jitteredMask[i] * 0.95, burrLayer[i] * bw));
     }
 
     // Sub-pixel edge smoothing (preserves 90-degree vector corners without heavy isotropic blurring)
-    const combinedSubpixel = gaussianBlur2D(combined, w, h, 0.35, 1);
+    const combinedSubpixel = gaussianBlur2D(combined, w, h, 0.3, 1);
     const solidMaskSources = new Uint8Array(w * h);
     const solidMask = new Uint8Array(w * h);
 
